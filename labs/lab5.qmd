@@ -1,0 +1,175 @@
+---
+title: "Lab 5: data visualization with ggplot2"
+author: "Torrey (A14397504)"
+format: pdf
+---
+
+## (6) Getting Started / Creating Scatter Plots
+
+To use packages, you need to (1) install with `install.packages()` and (2) load with `library()`. 
+Only install a package once in the "R brain" (console).
+
+```{r}
+# load packages
+library(ggplot2)
+library(gapminder)
+library(dplyr)
+library(gganimate)
+library(gifski)
+library(patchwork)
+```
+
+View cars dataset:
+
+```{r}
+head(cars) # don't want super long document 
+```
+
+Plot speed vs. distance: 
+
+```{r}
+ggplot(cars) + aes(x = speed, y = dist) + geom_point() 
+# add trend line
+ggplot(cars) + aes(x = speed, y = dist) + geom_point() + geom_smooth()
+# make the trend line linear and without the shading
+ggplot(cars) + aes(x = speed, y = dist) + geom_point() + geom_smooth(method = "lm", se = F)
+# change theme and add labels
+ggplot(cars) + aes(x = speed, y = dist) + geom_point() + geom_smooth(method = "lm", se = F) +
+  theme_bw() +
+  labs(x = "speed (MPH)", y = "stopping distance (feet)", title = "Cars - Speed vs. Stopping Distance")
+```
+
+Add more aesthetics
+
+New data:
+
+```{r}
+# load data
+url <- "https://bioboot.github.io/bimm143_S20/class-material/up_down_expression.txt"
+genes <- read.delim(url)
+head(genes)
+
+# investigate
+colnames(genes)
+nrow(genes)
+table(genes$State)
+nrow(genes[genes$State == "up", ]) / nrow(genes)
+round(table(genes$State) / nrow(genes),2) # this is how Barry did it
+```
+
+Plot:
+
+```{r}
+# condition 1 vs. 2
+ggplot(genes) + aes(x=Condition1, y=Condition2) + geom_point()
+# add color for state (expression)
+p<- ggplot(genes) + aes(x=Condition1, y=Condition2, col = State) + geom_point()
+p
+# change the colors
+p2 <- p + scale_color_manual(values = c("blue", "gray", "red"))
+p2
+# add labels
+p3 <- p2 + labs(x = "control (no drug)", y = "drug treatment", title = "Gene Expression Changes Upon Drug Treatment")
+p3
+```
+
+## (7) Going Further
+
+Load data:
+
+```{r}
+url <- "https://raw.githubusercontent.com/jennybc/gapminder/master/inst/extdata/gapminder.tsv"
+gapminder <- read.delim(url)
+```
+
+Use dplyr for data manipulation:
+
+```{r}
+gapminder_2007 <- gapminder %>% filter(year==2007)
+head(gapminder)
+```
+
+Plot GDPperCap vs. life expectancy:
+
+```{r}
+p4 <- ggplot(gapminder_2007) + aes(x = gdpPercap, y = lifeExp) + geom_point(); p4
+# make partially transparent
+p5 <- ggplot(gapminder_2007) + aes(x = gdpPercap, y = lifeExp) + geom_point(alpha = 0.5); p5
+```
+
+Add additional variables to the plot:
+
+```{r}
+p6 <- ggplot(gapminder_2007) + 
+  aes(x = gdpPercap, y = lifeExp, col = continent, size = pop) + 
+  geom_point(alpha = 0.5)
+p6
+
+p7 <- ggplot(gapminder_2007) + 
+  aes(x = gdpPercap, y = lifeExp, col = pop, size = continent) + 
+  geom_point(alpha = 0.5)
+p7
+
+# notice the differences in using color / size aesthetics for discrete (continent) vs. continuous (population) variables
+```
+
+Adjust point size:
+
+```{r}
+p8 <- ggplot(gapminder_2007) + 
+  aes(x = gdpPercap, y = lifeExp, size = pop) +
+  geom_point(alpha=0.5)
+p8
+
+#scale
+p9 <- ggplot(gapminder_2007) + 
+  aes(x = gdpPercap, y = lifeExp, size = pop) +
+  geom_point(alpha=0.5) +
+  scale_size_area(max_size = 10)
+p9
+ 
+
+```
+
+Recreate for 1957 data:
+
+```{r}
+gapminder_1957 <- gapminder %>% filter(year == 1957 | year == 2007)
+p10 <- ggplot(gapminder_1957) + aes(x = gdpPercap, y = lifeExp, col = continent, size = pop) + geom_point(alpha = 0.5) + scale_size_area(max_size = 10) +
+  facet_wrap(~year)
+p10
+
+```
+
+## (9) Extensions: Animation
+
+Make the plot show change over time:
+```{r}
+p11<- ggplot(gapminder, aes(gdpPercap, lifeExp, size = pop, colour = country)) +
+  geom_point(alpha = 0.7, show.legend = FALSE) +
+  scale_colour_manual(values = country_colors) +
+  scale_size(range = c(2, 12)) +
+  scale_x_log10() +
+  # facet by continent
+  facet_wrap(~continent) +
+  # animation
+  labs(title = 'Year: {frame_time}', x = 'GDP per capita', y = 'life expectancy') +
+  transition_time(year) +
+  shadow_wake(wake_length = 0.1, alpha = FALSE)
+p11
+```
+
+## (10) Combining plots
+
+```{r}
+# make indiviual plots
+p12 <- ggplot(mtcars) + geom_point(aes(mpg, disp))
+p13 <- ggplot(mtcars) + geom_boxplot(aes(gear, disp, group = gear))
+p14 <- ggplot(mtcars) + geom_smooth(aes(disp, qsec))
+p15 <- ggplot(mtcars) + geom_bar(aes(carb))
+
+# combine with patchwork
+(p12 | p13 | p14) /
+      p15
+```
+

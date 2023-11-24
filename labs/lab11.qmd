@@ -1,0 +1,94 @@
+---
+title: "Lab 11: structure prediction with AlphaFold2 (structural bioinformatics pt2.)"
+author: "Torrey Rhyne (A14397504)"
+format: pdf
+---
+
+## The EBI AlphaFold database
+
+Here we post process and inspect our modeling results from AlphaFold2.
+
+My results from AF live in the folder/directory ``
+
+```{r}
+results_dir <- "HIVprdimer_23119/"
+pdb_files <- list.files(results_dir, pattern = ".pdb", full.names = T)
+```
+
+We first ned to align and superpose these PDB models and we can use the `pdbaln()` function for this:
+```{r}
+library(bio3d)
+pdbs <- pdbaln(pdb_files, fit = T, exefile = "msa")
+```
+
+## The RMSD matrix
+
+A common measure of structural dis-similarity is called RMSD (root mean square distance):
+```{r}
+rd <- rmsd(pdbs, fit=T)
+rd
+```
+
+Visualize:
+```{r}
+library(pheatmap)
+
+rownames(rd) <- paste0("m",1:5)
+colnames(rd) <- paste0("m",1:5)
+pheatmap(rd)
+```
+Models 1/2 and 4/5 are similar.
+
+Let's view in Mol*. Here we want the fitted coordinates.
+```{r}
+xyz <- pdbfit(pdbs, outpath = "fitted")
+```
+
+A full atom based fitting that our superposition did not work very well because we have multiple chains that are in different conformations.
+
+I want to focus the superposition on the most invariant part (rigid "core").
+```{r}
+core <- core.find(pdbs)
+core.inds <- core
+```
+
+```{r}
+xyz <- pdbfit(pdbs, inds = core.inds, outpath = "core_fitted")
+```
+
+To evaluate how good multi-chain or multi-domain models are we need to looks at the PAE scores (predicted aligned error).
+
+These are output as JSON format files. Let's find all their file names:
+```{r}
+pae_files <- list.files(results_dir, pattern = "0.json", full.names = T)
+```
+
+```{r}
+library(jsonlite)
+
+pae1 <- read_json(pae_files[1], simplifyVector = T)
+pae5 <- read_json(pae_files[5], simplifyVector = T)
+
+```
+
+```{r}
+attributes(pae1)
+pae1$max_pae
+pae5$max_pae
+```
+
+```{r}
+plot.dmat(pae5$pae,
+          xlab = "Residue No.",
+          ylab = "Residue No.",
+          zlim = c(0, 30))
+
+plot.dmat(pae1$pae,
+          xlab = "Residue No.",
+          ylab = "Residue No.",
+          zlim = c(0, 30))
+```
+
+## Main points
+1. We can run AlphaFold on google compute (don't have to install ourselves). 
+2. We can read these results into R and process to help us make sense of these models and their PAE and pLDDT scores.

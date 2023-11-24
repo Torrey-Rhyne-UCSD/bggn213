@@ -1,0 +1,137 @@
+---
+title: "Lab 10 part 2: structural bioinformatics"
+author: "Torrey Rhyne (A14397504)"
+format: pdf
+---
+
+Today we are going to finish Lab 10 on analyzing protein structures (starting at section 4).
+
+## Comparative structure analysis of Adenylate Kinase
+
+Starting from only one Adk PDB identifier (PDB ID: 1AKE) we will search the entire PDB for related structures using BLAST, fetch, align, and superpose the identified structures, perform PCA, and finally calculate the normal modes of each individual structure in order to probe for potential differences in structural flexibility.
+
+We will use the `bio3d` package for this analysis that starts with a single sequence.
+We will also use the `msa` package from BioConductor. First, we need to install the `BiocManager` package from CRAN.
+We use `BiocManager::install()` to install any other BioConductor packages in the future.
+
+Setup:
+```{r}
+# Install packages in the R console, NOT your Rmd/Quarto file.
+# install.packages("bio3d")
+# install.packages("devtools")
+# install.packages("BiocManager") # from CRAN, manages BioConductor packages
+# BiocManager::install("msa") # install packages from BioConductor
+# devtools::install_bitbucket("Grantlab/bio3d-view")
+library(bio3d)
+```
+
+Q10. Which of the packages above is found only on BioConductor and not CRAN? 
+msa
+
+Q11. Which of the above packages is not found on BioConductor or CRAN?
+bio3d-view
+
+Q12. True or False? Functions from the devtools package can be used to install packages from GitHub and BitBucket? 
+TRUE
+
+Search and retrieve ADK structures.
+Below we perform a blast search of the PDB database to identify related structures to our query Adenylate kinase (ADK) sequence. In this particular example we use function get.seq() to fetch the query sequence for chain A of the PDB ID 1AKE and use this as input to blast.pdb(). Note that get.seq() would also allow the corresponding UniProt identifier.
+
+Sequence of interest = 1ake_A:
+```{r}
+aa <- get.seq("1ake_A")
+aa
+```
+
+Q13. How many amino acids are in this sequence, i.e. how long is this sequence? 
+214
+
+I want to search for all related structures in the PDB database.
+Blast search:
+```{r}
+#b <- blast.pdb(aa)
+# hits <- plot(b) # top scoring hits are black
+```
+
+Save results thus far so we don't have to run blast again:
+```{r}
+# save(hits, b, file = "blast_results.Rds")
+```
+
+Read this file:
+```{r}
+load("blast_results.Rds")
+```
+
+Investigate hits:
+```{r}
+head(hits)
+hits$pdb.id
+```
+
+Now we will download all these related structures from the database with `get.pdb()`:
+```{r}
+# download PDB files
+files <- get.pdb(hits$pdb.id, path="pdbs", split=TRUE, gzip=TRUE)
+# create folder so files don't get put in the project directory
+# view all these structures in Mol*
+```
+
+Next we will use the `pdbaln()` function to align and also optionally fit (i.e. superpose) the identified PDB structures.
+```{r}
+# Align releated PDBs
+pdbs <- pdbaln(files, fit = TRUE, exefile="msa")
+pdbs
+# Vector containing PDB codes for figure axis
+ids <- basename.pdb(pdbs$id)
+# Draw schematic alignment
+# plot(pdbs, labels=ids) # error message
+```
+This is a schematic representation of the alignment. Grey regions depict aligned residues, while white depict gap regions. The red bar at the top depict sequence conservation.
+
+Viewing our superposed structures with `view.pdbs()`:
+```{r}
+library(bio3d.view)
+library(rgl)
+
+view.pdbs(pdbs)
+```
+
+![](ADK.png)
+3D view of superposed ADK structures available in the PDB
+
+Annotate collected PDB structures: The function pdb.annotate() provides a convenient way of annotating the PDB files we have collected. Below we use the function to annotate each structure to its source species. This will come in handy when annotating plots later on.
+
+```{r}
+anno <- pdb.annotate(ids)
+unique(anno$source)
+# view all annotation data
+anno
+```
+
+Principle component analysis: The function `pca()` provides principal component analysis (PCA) of the structure data. PCA is a statistical approach used to transform a data set down to a few important components that describe the directions where there is most variance. In terms of protein structures PCA is used to capture major structural variations within an ensemble of structures.
+
+We can do a PCA on the coordinate data of all structures:
+```{r}
+# Perform PCA
+pc.xray <- pca(pdbs)
+plot(pc.xray)
+```
+Scree plot: 3 new variables (PC1-3) capture ~98% of the variance. Reduced from 17 to 3 variables!
+
+```{r}
+dim(pdbs$xyz)
+```
+
+```{r}
+plot(pc.xray, 1:2)
+```
+Results of PCA on Adenylate kinase X-ray structures. Each dot represents one PDB structure.
+
+View dynamics (structure -> function):
+```{r}
+mktrj(pc.xray, file = "pca_results.pdb") # view in Mol*
+```
+There's not just one structure!
+
+

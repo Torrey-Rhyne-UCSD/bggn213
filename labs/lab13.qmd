@@ -1,0 +1,296 @@
+---
+title: "Lab 13: RNA-seq analysis"
+author: "Torrey Rhyne (A14397504)"
+format: pdf
+---
+
+Setup:
+```{r}
+#| message: false
+#| warning: false
+library(DESeq2)
+```
+
+
+## (3) Import countData and colData
+
+Read csv:
+```{r}
+# Complete the missing code
+counts <- read.csv("airway_scaledcounts.csv", row.names=1)
+metadata <-  read.csv("airway_metadata.csv")
+```
+
+View:
+```{r}
+head(counts)
+head(metadata)
+```
+
+How many genes are in this dataset? 
+```{r}
+nrow(counts)
+```
+
+How many ‘control’ cell lines do we have? 
+```{r}
+table(metadata$dex)
+```
+
+## (4) Toy differential gene expression
+
+Lets perform some exploratory differential gene expression analysis. 
+Note: this analysis is for demonstration only. NEVER do differential expression analysis this way!
+
+Step 1: Identify and extract "control" columns.
+Step 2: Calculate the mean value per gene for all these "control" columns.
+Step 3: Do the same for "treated".
+Step 4: Compare the "control.mean" and "treated.mean" values.
+
+Step 1:
+```{r}
+control <- metadata[metadata[,"dex"]=="control",]
+```
+
+Step 2:
+```{r}
+control.counts <- counts[ ,control$id]
+control.mean <- rowSums( control.counts )/4 
+head(control.mean)
+```
+
+Alternative with dplyr:
+```{r}
+suppressMessages(library(dplyr))
+control <- metadata %>% filter(dex=="control")
+control.counts <- counts %>% select(control$id) 
+control.mean <- rowSums(control.counts)/4
+head(control.mean)
+```
+
+Step 3:
+```{r}
+suppressMessages(library(dplyr))
+
+treated <- metadata %>% filter(dex=="treated")
+treated.counts <- counts %>% select(treated$id) 
+treated.mean <- rowMeans(treated.counts) # more robust
+head(treated.mean)
+# Barry's way (combine)
+treated.mean <- rowMeans(counts[,metadata$dex == "treated"])
+head(treated.mean)
+```
+
+Step 4 (combine into one dataframe and plot):
+```{r}
+mean.counts <- data.frame(control.mean, treated.mean)
+plot(mean.counts)
+```
+```{r}
+suppressMessages(library(ggplot2))
+
+ggplot(mean.counts) + 
+  aes(control.mean, treated.mean) +
+  geom_point(alpha = 0.2)
+```
+
+Skewed data. Do a log transformation:
+```{r}
+plot(mean.counts, log = "xy")
+```
+
+Logs are super useful when we have such skewed data and/or are interested in big changes (orders of magnitude).
+```{r}
+# treated / control
+10/10
+log2(10/10) # useful because log1 = 0 ("no change" - like in volcano plots)
+log2(40/10)
+```
+
+Add log2 fold-change column to mean.counts data:
+```{r}
+suppressMessages(library(dplyr))
+
+mean.counts <- mean.counts %>% mutate("log2fc" = log2(treated.mean/control.mean))
+head(mean.counts)
+```
+
+I need to exclude any genes with zero counts. We can't say anything about them anyways from this experiment and it causes me math pain.
+```{r}
+# what values in the first two cols = 0?
+# remember T = 1, F = 0 (so we want to keep F + f = 0)
+keep.inds <- rowSums(mean.counts[,1:2] == 0) == 0
+mycounts <- mean.counts[keep.inds,]
+
+# Barry uses which in the notebook
+which(T,F,T)
+head(which(mean.counts[,1:2] == 0))
+```
+
+How many genes do I have left?
+```{r}
+nrow(mycounts)
+```
+
+How many are up-regulated using a threshold of log2fc = 2?
+```{r}
+sum(mycounts$log2fc > +2)
+```
+
+How many are down-regulated?
+```{r}
+sum(mycounts$log2fc < -2)
+```
+
+Are we satisfied? No. No measure of significance. Use DESeq2.
+You could get this much variation by chance within the control samples, for example.
+
+## (5) settin up DESeq 
+
+Like many bioconductor analysis packages, DESeq wants it's input in a very particular way.
+
+```{r}
+dds <- DESeqDataSetFromMatrix(countData = counts, 
+                       colData = metadata,
+                       design = ~dex)
+```
+
+## (6) PCA 
+
+Can use PCA as sort of a QC (should see separation between control and treated).
+
+## (7) DESeq analysis
+
+To run DESeq analysis we call the main function from the package `DESeq(dds)`:
+```{r}
+dds <- DESeq(dds)
+```
+
+To get the results out of the `dds` object we can use the DESeq `results()` function:
+```{r}
+res <- results(dds)
+head(res)
+```
+
+## (9) Data visualization
+
+A common summary visualization is called a volcano plot.
+```{r}
+plot(res$log2FoldChange, res$padj) 
+```
+
+Flip the y-axis, do a transformation, and add labels:
+```{r}
+plot(res$log2FoldChange, -log(res$padj),
+     xlab = "log2 fold-change",
+     ylab = "-log agjusted p-value")
+abline(v=c(-2,2), col="red")
+abline(h=-log(0.05), col="blue")
+```
+
+Much better! Now add color:
+```{r}
+mycols <- rep("grey",nrow(res))
+mycols[res$log2FoldChange > 2 | res$log2FoldChange < -2] <- "black"
+mycols[res$padj > 0.05] <- "grey"
+
+
+plot(res$log2FoldChange, -log(res$padj), col=mycols,
+     xlab = "log2 fold-change",
+     ylab = "-log agjusted p-value")
+abline(v=c(-2,2), col="red")
+abline(h=-log(0.05), col="blue")
+```
+
+Summarize and save results so far:
+```{r}
+res05 <- results(dds, alpha=0.05)
+summary(res05)
+```
+
+## (8) Adding annotation data.
+
+We need to translate or "map" our ensemble IDs into more understandable gene names and the identifiers that other useful databases use.
+
+Packages:
+```{r}
+library(AnnotationDbi)
+library("org.Hs.eg.db") # data package
+```
+
+```{r}
+columns(org.Hs.eg.db)
+```
+
+```{r}
+res$symbol <- mapIds(org.Hs.eg.db,
+                     keys=row.names(res),     # Our gene names
+                     keytype="ENSEMBL",       # The format of our gene names
+                     column="SYMBOL",         # The new format we want to add
+                     multiVals="first")       # Choosing most abundant here
+
+head(res)
+```
+
+Run the `mapIds()` function three more times to add the Entrez ID, UniProt accession, and Genename.
+```{r}
+res$entrez <- mapIds(org.Hs.eg.db,
+                     keys=row.names(res),     # Our gene names
+                     keytype="ENSEMBL",       # The format of our gene names
+                     column="ENTREZID",         # The new format we want to add
+                     multiVals="first")       # Choosing most abundant here
+
+res$uniprot <- mapIds(org.Hs.eg.db,
+                     keys=row.names(res),     # Our gene names
+                     keytype="ENSEMBL",       # The format of our gene names
+                     column="UNIPROT",         # The new format we want to add
+                     multiVals="first")       # Choosing most abundant here
+
+res$genename <- mapIds(org.Hs.eg.db,
+                     keys=row.names(res),     # Our gene names
+                     keytype="ENSEMBL",       # The format of our gene names
+                     column="GENENAME",         # The new format we want to add
+                     multiVals="first")       # Choosing most abundant here
+```
+
+## Pathway analysis
+
+Packages:
+```{r}
+library(pathview)
+library(gage)
+library(gageData)
+```
+
+Examine the first 2 pathways in this kegg set for humans:
+```{r}
+data(kegg.sets.hs)
+head(kegg.sets.hs, 2)
+```
+
+Note - higher chance of hitting pathway with more genes involved.
+
+Run gage (need vector of foldchanges first, not whole df):
+```{r}
+foldchanges = res$log2FoldChange
+names(foldchanges) = res$entrez
+head(foldchanges)
+
+keggres = gage(foldchanges, gsets=kegg.sets.hs)
+```
+
+Examine:
+```{r}
+attributes(keggres)
+head(keggres$less, 3)
+```
+
+Lets have a look at one of these pathways
+```{r}
+pathview(gene.data=foldchanges, pathway.id="hsa05310")
+```
+
+![](hsa05310.pathview.png)
+
+
+

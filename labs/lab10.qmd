@@ -1,0 +1,159 @@
+---
+title: "lab 10: structural bioinformatics (part 1)"
+author: "Torrey Rhyne (A14397504)"
+format: pdf
+---
+
+## Introduction to PDB
+
+PDB Statistics.
+
+Download csv file from PDB (accessible from “Analyze” > “PDB Statistics” > “by Experimental Method and Molecular Type”):
+```{r}
+pdb_stats <- read.csv("./Data Export Summary.csv", row.names = 1)
+```
+
+
+Q1: What percentage of structures in the PDB are solved by X-Ray and Electron Microscopy.
+```{r}
+(sum(pdb_stats$X.ray) + sum(pdb_stats$EM)) / sum(pdb_stats$Total)
+```
+
+Q2: What proportion of structures in the PDB are protein?
+```{r}
+# protein only
+pdb_stats[1,7] / sum(pdb_stats[,7])
+# protein / oligosaccharide or NA
+sum(pdb_stats[1:3,7]) / sum(pdb_stats[,7])
+```
+
+Q3: Type HIV in the PDB website search box on the home page and determine how many HIV-1 protease structures are in the current PDB? (skip)
+
+PDB format.
+Download the “PDB File” for the HIV-1 protease structure with the PDB identifier 1HSG and view in terminal.
+
+## Visualizing the HIV-1 protease structure with Mol*
+
+Image of HIV-Pr that is not very useful yet.
+![](1HSG_1.png)
+Highlight Asp 25 (D25) residue.
+![](1HSG_2.png)
+
+## Introduction to Bio3D in R
+
+Q4: Water molecules normally have 3 atoms. Why do we see just one atom per water molecule in this structure?
+Hydrogen atoms are too small for the resolution of this structure (2 A).
+
+Q5: There is a critical “conserved” water molecule in the binding site. Can you identify this water molecule? What residue number does this water molecule have?
+308
+
+Q6: Generate a more helpful image with Asp 25 and the critical water molecule highlighted.
+![](1HSG_4.png)
+Asp25 = bright green
+Ligand = grey
+critical water = red ball
+
+## Introduction to Bio3D in R
+
+Load package:
+```{r}
+library(bio3d)
+```
+
+Load pdb file:
+```{r}
+pdb <- read.pdb("1hsg")
+pdb
+```
+
+Q7: How many amino acid residues are there in this pdb object? 198
+
+Q8: Name one of the two non-protein residues? HOH
+
+Q9: How many protein chains are in this structure? 2
+
+Attributes:
+```{r}
+attributes(pdb)
+head(pdb$atom)
+```
+
+Predicting functional motions of a single molecule.
+Run a normal mode analysis (NMA) - a bioinformatics method to predict functional motions.
+
+Load new pdb file:
+```{r}
+adk <- read.pdb("6s36")
+adk
+```
+
+Perform flexibility prediction:
+```{r}
+m <- nma(adk)
+plot(m)
+```
+
+Make a movie:
+```{r}
+mktrj(m, file="adk_m7.pdb")
+# load this file into Mol*
+```
+
+## Comparative structure analysis of Adenylate Kinase
+
+Starting from only one Adk PDB identifier (PDB ID: 1AKE) we will search the entire PDB for related structures using BLAST, fetch, align and superpose the identified structures, perform PCA and finally calculate the normal modes of each individual structure in order to probe for potential differences in structural flexibility.
+
+Setup:
+```{r}
+# Install packages in the R console NOT your Rmd/Quarto file
+# install.packages("bio3d")
+# install.packages("devtools")
+# install.packages("BiocManager")
+# BiocManager::install("msa")
+# devtools::install_bitbucket("Grantlab/bio3d-view")
+```
+
+Q10. Which of the packages above is found only on BioConductor and not CRAN? 
+msa
+
+Q11. Which of the above packages is not found on BioConductor or CRAN?
+bio3d-view
+
+Q12. True or False? Functions from the devtools package can be used to install packages from GitHub and BitBucket? 
+TRUE
+
+Search and retrieve ADK structures.
+Below we perform a blast search of the PDB database to identify related structures to our query Adenylate kinase (ADK) sequence. In this particular example we use function get.seq() to fetch the query sequence for chain A of the PDB ID 1AKE and use this as input to blast.pdb(). Note that get.seq() would also allow the corresponding UniProt identifier.
+
+```{r}
+library(bio3d)
+aa <- get.seq("1ake_A")
+aa
+```
+
+Q13. How many amino acids are in this sequence, i.e. how long is this sequence? 
+214
+
+Blast search:
+```{r}
+b <- blast.pdb(aa)
+hits <- plot(b)
+```
+
+List some of the top hits:
+```{r}
+head(hits$pdb.id)
+```
+
+Download related PDB files:
+```{r}
+files <- get.pdb(hits$pdb.id, path="pdbs", split=TRUE, gzip=TRUE)
+```
+
+Align and superpose structures.
+Next we will use the pdbaln() function to align and also optionally fit (i.e. superpose) the identified PDB structures.
+
+
+
+
+
