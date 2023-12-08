@@ -76,7 +76,7 @@ protein("4AKE")
       Note: Accessing on-line PDB file
 
     Warning in get.pdb(file, path = tempdir(), verbose = FALSE):
-    /var/folders/kw/y425qndd13sg9ys06ggcw67h0000gn/T//RtmpUsxfGZ/4AKE.pdb exists.
+    /var/folders/kw/y425qndd13sg9ys06ggcw67h0000gn/T//RtmpbuLzBS/4AKE.pdb exists.
     Skipping download
 
 ![](HW6_files/figure-commonmark/unnamed-chunk-4-1.png)
@@ -88,7 +88,7 @@ protein("1AKE")
       Note: Accessing on-line PDB file
 
     Warning in get.pdb(file, path = tempdir(), verbose = FALSE):
-    /var/folders/kw/y425qndd13sg9ys06ggcw67h0000gn/T//RtmpUsxfGZ/1AKE.pdb exists.
+    /var/folders/kw/y425qndd13sg9ys06ggcw67h0000gn/T//RtmpbuLzBS/1AKE.pdb exists.
     Skipping download
 
        PDB has ALT records, taking A only, rm.alt=TRUE
@@ -102,7 +102,7 @@ protein("1E4Y")
       Note: Accessing on-line PDB file
 
     Warning in get.pdb(file, path = tempdir(), verbose = FALSE):
-    /var/folders/kw/y425qndd13sg9ys06ggcw67h0000gn/T//RtmpUsxfGZ/1E4Y.pdb exists.
+    /var/folders/kw/y425qndd13sg9ys06ggcw67h0000gn/T//RtmpbuLzBS/1E4Y.pdb exists.
     Skipping download
 
 ![](HW6_files/figure-commonmark/unnamed-chunk-4-3.png)
