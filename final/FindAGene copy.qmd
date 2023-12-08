@@ -1,0 +1,105 @@
+---
+title: "Find A Gene"
+author: "Torrey Rhyne (A14397504)"
+format: pdf
+---
+
+Goal: generate a sequence identity heatmap of aligned sequences.
+
+Load packages:
+```{r}
+library(bio3d)
+library(pheatmap)
+library(jsonlite)
+library(dplyr)
+```
+
+Import fasta sequences:
+```{r}
+TBP <- read.fasta("TBP.fst")
+```
+
+Make heatmap:
+```{r}
+matrix <- seqidentity(TBP)
+heatmap(matrix, main = "Sequence Identity Heatmap of TBP", margins = c(10,8))
+
+```
+
+Goal: Generate a consensus sequence of aligned sequences to search for structure in PDB.
+
+```{r}
+consensus <- consensus(TBP)
+consensus_seq <- consensus$seq
+consensus_seq
+# lots of gaps
+```
+
+Instead, find sequence most similar to the others.
+
+```{r}
+# calculate similarity score
+matrix_df <- as.data.frame(matrix)
+matrix_df <- matrix_df %>% mutate(matrix_df, "similarity" = rowSums(matrix))
+
+# which?
+matrix_sorted <- matrix_df[order(-matrix_df$similarity), ]
+matrix_sorted
+```
+
+Use Wasp_Venturia as the "consensus":
+```{r}
+wasp_seq <- read.fasta("wasp.fst")
+```
+
+Goal: Search PDB for the most similar atomic resolution structures to your aligned sequences.
+
+```{r}
+top_pdbs <- blast.pdb(wasp_seq, database = "pdb", time.out = 60)
+top_pdbs_table <- top_pdbs$hit.tbl
+```
+
+Extract ID, e-value, and identity from top 3 hits:
+```{r}
+ID <- as.vector(top_pdbs_table$subjectids[1:20])
+e_value <- as.vector(top_pdbs_table$evalue[1:20])
+percent_identity <- as.vector(top_pdbs_table$identity[1:20])
+```
+
+Annotate for more info:
+```{r}
+annotate_pdbs <- pdb.annotate(top_pdbs_table$subjectids)
+```
+
+Extract technique, resolution, and source from top 3 hits:
+```{r}
+technique <- as.vector(annotate_pdbs$experimentalTechnique[1:20])
+resolution <- as.vector(annotate_pdbs$resolution[1:20])
+source <- as.vector(annotate_pdbs$source[1:20])
+```
+
+Combine into one table:
+```{r}
+top20_pdbs_table <- data.frame(ID, e_value, percent_identity, technique, resolution, source)
+```
+
+Extract top 3 in different species:
+```{r}
+hits <- top20_pdbs_table[c(1,9,12),]
+hits
+```
+
+Goal: find reserved residues in the consensus (8 or 9/9)?
+```{r}
+consensus <- consensus(TBP)
+consensus_seq <- consensus$seq
+
+consensus_conserved <- consensus(TBP, cutoff = 0.88)
+consensus_seq_conserved <- consensus_conserved$seq
+consensus_seq_conserved
+
+consensus_conserved <- consensus(TBP, cutoff = 0.999)
+consensus_seq_conserved <- consensus_conserved$seq
+consensus_seq_conserved
+```
+
