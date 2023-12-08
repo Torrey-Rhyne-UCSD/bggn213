@@ -17,8 +17,8 @@ Class 10: [Structural Bioinformatics part 1](https://github.com/Torrey-Rhyne-UCS
 
 Class 11: [Structure Predictions with AlphaFold](https://github.com/Torrey-Rhyne-UCSD/bggn213/blob/main/labs/class%2011/lab11.qmd)
 
-Class 13: [RNA-Seq Analysis](https://github.com/Torrey-Rhyne-UCSD/bggn213/blob/main/labs/class%2013/lab13.qmd)
+Class 13: [RNA-Seq Analysis](https://github.com/Torrey-Rhyne-UCSD/bggn213/blob/main/labs/class%2013/lab13.md)
 
-Class 14: [RNA-Seq Mini Project](https://github.com/Torrey-Rhyne-UCSD/bggn213/blob/main/labs/class%2014/lab14.qmd)
+Class 14: [RNA-Seq Mini Project](https://github.com/Torrey-Rhyne-UCSD/bggn213/blob/main/labs/class%2014/lab14.md)
 
-Class 19: [Investigating Pertussis Resurgence Mini Project](https://github.com/Torrey-Rhyne-UCSD/bggn213/blob/main/labs/class%2019/lab19.qmd)
+Class 19: [Investigating Pertussis Resurgence Mini Project](https://github.com/Torrey-Rhyne-UCSD/bggn213/blob/main/labs/class%2019/lab19.md)
