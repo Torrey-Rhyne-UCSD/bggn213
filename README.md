@@ -1,6 +1,6 @@
-# bggn213
+# Foundations of Bioinformatics
 
-This repository is for my UCSD bioinformatics class (Fall 2023).
+This repository is for my bioinformatics work (UCSD BGGN213, Fall 2023).
 
 Class 5: [Data visualization with GGPLOT](https://github.com/Torrey-Rhyne-UCSD/bggn213/blob/main/labs/class%205/lab5.md)
 
